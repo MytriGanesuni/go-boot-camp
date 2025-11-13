@@ -21,7 +21,7 @@ type UserRatings struct {
 	comments []Comment
 }
 
-func (r *Rating) AddUserRating(customer string, rating float64, comment string) error{
+func (r *Rating) AddUserRating(customer string, rating float64, comment string) error {
 	if rating < 0 || rating > 5 {
 		return errors.New("rating must be between 0 and 5")
 	}
@@ -30,10 +30,11 @@ func (r *Rating) AddUserRating(customer string, rating float64, comment string) 
 		rating:   rating,
 		comments: []Comment{
 			{date: time.Now(),
-				 text: comment},
+				text: comment},
 		},
 	})
 	r.avgRating = r.AverageRating()
+	fmt.Println(r.String())
 	return nil
 }
 
