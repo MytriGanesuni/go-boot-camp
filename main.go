@@ -65,9 +65,11 @@ func main() {
 				fmt.Println("Product: ", product)
 				fmt.Println("Rating: ", rating.String())
 			}
-
-		}else if choice == "3" {
+		} else if choice == "3" {
+			fmt.Println("Exiting...")
 			break
+		} else {
+			fmt.Println("Invalid choice. Please enter 1, 2, or 3.")
 		}
 	}
 }
