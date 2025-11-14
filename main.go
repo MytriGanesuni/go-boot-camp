@@ -1,75 +1,75 @@
 package main
 
 import (
-	"bufio"
+	"context"
 	"fmt"
-	"hello_world/ratings"
-	"os"
-	"strconv"
-	"strings"
+	"net/http"
+	"sync"
+	"time"
 )
 
 func main() {
-	reader := bufio.NewReader(os.Stdin)
-	productToReviewMap := make(map[string]*ratings.Rating)
 
-	for {
-		fmt.Println("Enter 1 to add product & review ,2 to view all products , 3 to exit:")
-		choice, _ := reader.ReadString('\n')
-		choice = strings.TrimSpace(choice)
+	urls := []string{
+		"https://gdg.community.dev/gdg-cochin/",
+		"https://golang.org",
+		"https://httpstat.us/500",
+		"https://www.google.com/",
+		"https://www.facebook.com/",
+		"https://www.twitter.com/",
+		"https://www.instagram.com/",
+		"https://site-not-present.io",
+		"https://www.youtube.com/",
+		"https://www.linkedin.com/",
+		"https://www.github.com/",
+		"https://www.stackoverflow.com/",
+		"https://www.reddit.com/",
+	}
 
-		if choice == "1" {
-			fmt.Println("Enter the product name:")
-			productName, _ := reader.ReadString('\n')
-			productName = strings.TrimSpace(productName)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var wg sync.WaitGroup
 
-			if productToReviewMap[productName] == nil {
-				productToReviewMap[productName] = &ratings.Rating{}
-			}
+	ch := make(chan string, len(urls))
+	for _, url := range urls {
+		wg.Add(1)
+		go func(u string) {
+			statusCode, _ := checkURL(ctx, u)
+			printStatus(u, statusCode)
+			wg.Done()
+			ch <- u
+		}(url)
+	}
+	wg.Wait()
 
-			// Sub-menu for adding reviews
-			for {
-				fmt.Println("Enter 1 to add review, 2 to main menu:")
-				subChoice, _ := reader.ReadString('\n')
-				subChoice = strings.TrimSpace(subChoice)
-
-				if subChoice == "1" {
-					fmt.Println("Enter the Customer name:")
-					name, _ := reader.ReadString('\n')
-					name = strings.TrimSpace(name)
-
-					fmt.Println("Enter the rating (1-5):")
-					ratingValue, _ := reader.ReadString('\n')
-					ratingValue = strings.TrimSpace(ratingValue)
-
-					fmt.Println("Enter the comment:")
-					comment, _ := reader.ReadString('\n')
-					comment = strings.TrimSpace(comment)
-
-					ratingValueFloat, err := strconv.ParseFloat(ratingValue, 64)
-					if err != nil {
-						fmt.Println("Invalid rating")
-						continue
-					}
-
-					err = productToReviewMap[productName].AddUserRating(name, ratingValueFloat, comment)
-					if err != nil {
-						fmt.Println(err)
-					}
-				} else if subChoice == "2" {
-					break
-				}
-			}
-		} else if choice == "2" {
-			for product, rating := range productToReviewMap {
-				fmt.Println("Product: ", product)
-				fmt.Println("Rating: ", rating.String())
-			}
-		} else if choice == "3" {
-			fmt.Println("Exiting...")
-			break
-		} else {
-			fmt.Println("Invalid choice. Please enter 1, 2, or 3.")
+	select {
+	case <-ctx.Done():
+		fmt.Println("Context cancelled")
+	case <-ch:
+		if len(ch) == len(urls)-1 {
+			fmt.Println("✓ All URLs checked")
 		}
 	}
+}
+
+func printStatus(url string, statusCode int) {
+	if statusCode == 200 {
+		fmt.Println("URL: ", url, "is up and running with status code: ", statusCode)
+	} else {
+		fmt.Println("URL: ", url, "is down with status code: ", statusCode)
+	}
+}
+
+func checkURL(ctx context.Context, url string) (int, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return 0, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	return resp.StatusCode, nil
 }
